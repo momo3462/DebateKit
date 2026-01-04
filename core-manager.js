@@ -3,59 +3,43 @@
  * Gestisce autenticazione, permessi e persistenza dati.
  */
 
-// Inizializzazione immediata dell'oggetto globale
-window.CoreManager = window.CoreManager || {};
-
+// 1. Configurazione
 const DEBATE_CONFIG = {
     PASS_STANDARD: "MeleCotte",
     PASS_SPECIAL: "la grande mela",
     STORAGE_KEY: "debatekit_session"
 };
 
-/**
- * Controlla se l'utente è loggato. 
- * Se non lo è, reindirizza al login (tranne se si è già lì).
- */
-function checkAuth() {
-    const sessionStr = localStorage.getItem(DEBATE_CONFIG.STORAGE_KEY);
-    const session = sessionStr ? JSON.parse(sessionStr) : null;
-    
-    // Controllo robusto dell'URL per evitare loop infiniti
-    const currentPath = window.location.pathname;
-    const isLoginPage = currentPath.includes('login.html') || (currentPath.endsWith('/login'));
-
-    if (!session && !isLoginPage) {
-        // Se non loggato e non in login page -> Vai al login
-        window.location.replace('login.html');
-        return null;
-    } else if (session && isLoginPage) {
-        // Se già loggato e provi ad andare al login -> Vai alla home
-        window.location.replace('index.html');
-        return session;
-    }
-    
-    // Gestione fluida delle transizioni di pagina
-    if (!document.getElementById('page-transitions-style')) {
-        const style = document.createElement('style');
-        style.id = 'page-transitions-style';
-        style.innerHTML = `
-            body { opacity: 0; transition: opacity 0.4s ease-in-out; }
-            body.loaded { opacity: 1; }
-        `;
-        document.head.appendChild(style);
-        window.addEventListener('load', () => document.body.classList.add('loaded'));
-    }
-
-    return session;
-}
-
-// Esecuzione immediata del controllo
-const activeUser = checkAuth();
-
-// Esportazione funzioni nell'oggetto globale
+// 2. Definizione dell'oggetto CoreManager
 window.CoreManager = {
-    user: activeUser,
-    
+    user: null,
+
+    init: function() {
+        const sessionStr = localStorage.getItem(DEBATE_CONFIG.STORAGE_KEY);
+        this.user = sessionStr ? JSON.parse(sessionStr) : null;
+        
+        // Esegui il controllo di sicurezza
+        this.checkAuth();
+        
+        // Gestione estetica transizioni
+        this.injectTransitions();
+        
+        return this.user;
+    },
+
+    checkAuth: function() {
+        const currentPath = window.location.pathname;
+        const isLoginPage = currentPath.includes('login.html') || currentPath.endsWith('/login');
+
+        if (!this.user && !isLoginPage) {
+            // Non loggato -> Vai al login
+            window.location.replace('login.html');
+        } else if (this.user && isLoginPage) {
+            // Già loggato -> Vai alla home
+            window.location.replace('index.html');
+        }
+    },
+
     login: function(username, password) {
         if (!username || username.trim().length < 2) {
             return { success: false, message: "Inserisci un nome valido!" };
@@ -78,11 +62,28 @@ window.CoreManager = {
         };
 
         localStorage.setItem(DEBATE_CONFIG.STORAGE_KEY, JSON.stringify(sessionData));
+        this.user = sessionData;
         return { success: true };
     },
 
     logout: function() {
         localStorage.removeItem(DEBATE_CONFIG.STORAGE_KEY);
         window.location.replace('login.html');
+    },
+
+    injectTransitions: function() {
+        if (!document.getElementById('page-transitions-style')) {
+            const style = document.createElement('style');
+            style.id = 'page-transitions-style';
+            style.innerHTML = `
+                body { opacity: 0; transition: opacity 0.4s ease-in-out; }
+                body.loaded { opacity: 1; }
+            `;
+            document.head.appendChild(style);
+            window.addEventListener('load', () => document.body.classList.add('loaded'));
+        }
     }
 };
+
+// 3. Avvio immediato al caricamento del file
+CoreManager.init();
