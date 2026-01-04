@@ -3,14 +3,12 @@
  * Gestisce autenticazione, permessi e persistenza dati.
  */
 
-// 1. Configurazione
 const DEBATE_CONFIG = {
     PASS_STANDARD: "MeleCotte",
     PASS_SPECIAL: "la grande mela",
     STORAGE_KEY: "debatekit_session"
 };
 
-// 2. Definizione dell'oggetto CoreManager
 window.CoreManager = {
     user: null,
 
@@ -28,14 +26,14 @@ window.CoreManager = {
     },
 
     checkAuth: function() {
-        const currentPath = window.location.pathname;
-        const isLoginPage = currentPath.includes('login.html') || currentPath.endsWith('/login');
+        const path = window.location.pathname;
+        // Riconosce sia login.html che il percorso semplice /login (per Vercel)
+        const isLoginPage = path.endsWith('login.html') || path.endsWith('/login');
 
         if (!this.user && !isLoginPage) {
-            // Non loggato -> Vai al login
             window.location.replace('login.html');
         } else if (this.user && isLoginPage) {
-            // Già loggato -> Vai alla home
+            // Se sei loggato e provi ad andare al login, ti riporta in home
             window.location.replace('index.html');
         }
     },
@@ -80,10 +78,11 @@ window.CoreManager = {
                 body.loaded { opacity: 1; }
             `;
             document.head.appendChild(style);
-            window.addEventListener('load', () => document.body.classList.add('loaded'));
+            window.addEventListener('load', () => {
+                setTimeout(() => document.body.classList.add('loaded'), 50);
+            });
         }
     }
 };
 
-// 3. Avvio immediato al caricamento del file
 CoreManager.init();
