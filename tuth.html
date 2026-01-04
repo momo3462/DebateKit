@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <script src="core-manager.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tuth - Debate Tutor AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Fira+Code&display=swap');
+
+        :root {
+            /* Effetto Glass Rinforzato */
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 10px 40px -10px rgba(245, 158, 11, 0.15);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #fffbeb;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(45,100%,94%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 100%, hsla(40,100%,92%,1) 0, transparent 50%);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .fluid-glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+        }
+
+        /* Chat Layout */
+        #main-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 1.5rem;
+            flex: 1;
+            padding: 1.5rem;
+            padding-right: 6rem; 
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #chat-section {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-bottom: 120px;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 85%;
+            padding: 1.25rem 1.5rem;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-tutor {
+            background: white;
+            color: #334155;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #fef3c7;
+        }
+
+        .msg-user {
+            background: #f59e0b;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2);
+        }
+
+        /* Resource Sidebar */
+        #resource-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .resource-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 1.25rem;
+            border: 1px solid #fef3c7;
+            transition: all 0.2s;
+        }
+        .resource-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.1); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #fde68a; border-radius: 10px; }
+
+        /* Navigation Dock Vertical */
+        .toolbar-dock {
+            position: fixed; 
+            right: 1.5rem; 
+            top: 50%; 
+            transform: translateY(-50%);
+            z-index: 100; 
+            padding: 0.8rem; 
+            border-radius: 2.5rem;
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 1.2rem;
+            color: #64748b; 
+            transition: all 0.2s;
+        }
+        .nav-item:hover { color: #f59e0b; background: rgba(255, 255, 255, 0.5); }
+        .nav-item.active { background: white; color: #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); }
+
+        .suggestion-btn {
+            background: white;
+            border: 1px solid #fde68a;
+            color: #b45309;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .suggestion-btn:hover { background: #fffbeb; border-color: #f59e0b; transform: scale(1.02); }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="p-6 pb-2 max-w-[1400px] mx-auto w-full flex justify-between items-center pr-24">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-100">
+                <i data-lucide="message-square" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 leading-none">Tuth AI</h1>
+                <p class="text-xs font-bold text-amber-600 uppercase tracking-widest mt-1">Debate Tutor & Research</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-white/50 px-4 py-2 rounded-2xl border border-white">
+            <div class="text-right">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5" id="role-display">Utente</p>
+                <p class="text-xs font-black text-slate-700" id="display-username">Username</p>
+            </div>
+            <div class="w-9 h-9 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                <i data-lucide="user" class="w-4 h-4"></i>
+            </div>
+        </div>
+    </header>
+
+    <div id="main-layout">
+        <!-- Chat Section -->
+        <section id="chat-section">
+            <div id="chat-container">
+                <div class="message msg-tutor">
+                    <p class="font-black text-amber-600 text-[10px] uppercase tracking-widest mb-1">Tuth System</p>
+                    Benvenuto nel modulo di addestramento. Sono pronto ad aiutarti a scovare dati, strutturare argomentazioni o simulare confutazioni. <br><br>Qual è il <b>topic</b> del debate di oggi?
+                </div>
+            </div>
+
+            <!-- Input & Suggestions -->
+            <div class="absolute bottom-4 left-0 right-0 px-4">
+                <div class="flex gap-2 overflow-x-auto pb-3 no-scrollbar">
+                    <button class="suggestion-btn" onclick="quickAsk('Trova 3 statistiche su...')">📊 Statistiche</button>
+                    <button class="suggestion-btn" onclick="quickAsk('Genera 3 argomenti PRO per...')">✅ Argomenti PRO</button>
+                    <button class="suggestion-btn" onclick="quickAsk('Genera 3 argomenti CONTRO per...')">❌ Argomenti CONTRO</button>
+                    <button class="suggestion-btn" onclick="quickAsk('Come posso confutare l\'idea che...')">🛡️ Confutazione</button>
+                </div>
+                <div class="fluid-glass p-2 rounded-[2rem] flex items-center gap-2 border-amber-200">
+                    <input id="user-input" type="text" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="Chiedi a Tuth (es. 'Trovami una fonte per...')" class="flex-1 bg-transparent px-6 py-3 outline-none text-slate-700 font-medium">
+                    <button onclick="sendMessage()" class="bg-amber-500 hover:bg-amber-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sidebar Section -->
+        <aside id="resource-sidebar">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
+                    <i data-lucide="layers" class="w-4 h-4 text-amber-500"></i> Risorse Trovate
+                </h3>
+                <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-1 rounded-lg" id="count-res">0</span>
+            </div>
+            <div id="resources-list" class="overflow-y-auto flex-1 flex flex-col gap-3">
+                <div id="empty-res" class="text-center py-12 opacity-40">
+                    <i data-lucide="search" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p class="text-xs font-bold">Nessun dato salvato</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Navigation Dock Vertical -->
+    <nav class="toolbar-dock fluid-glass">
+        <!-- Logo Icon -->
+        <div class="w-11 h-11 bg-amber-500 rounded-xl flex items-center justify-center text-white mb-2 shadow-lg shadow-amber-200/50">
+            <i data-lucide="message-square" class="w-5 h-5"></i>
+        </div>
+        
+        <a href="index.html" class="nav-item" title="Home"><i data-lucide="home" class="w-5 h-5"></i></a>
+        <a href="advi.html" class="nav-item" title="Advisor"><i data-lucide="info" class="w-5 h-5"></i></a>
+        <a href="dash.html" class="nav-item" title="Dash"><i data-lucide="layout" class="w-5 h-5"></i></a>
+        <a href="tuth.html" class="nav-item active" title="Tutor"><i data-lucide="message-square" class="w-5 h-5"></i></a>
+        
+        <div class="w-8 h-px bg-white/30 my-2"></div>
+        
+        <button onclick="handleLogout()" class="nav-item text-rose-500" title="Esci"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+    </nav>
+
+    <script>
+        let resources = [];
+
+        window.onload = function() {
+            lucide.createIcons();
+            
+            // Sincronizzazione con CoreManager
+            const user = window.CoreManager ? window.CoreManager.user : null;
+            if (user) {
+                document.getElementById('display-username').textContent = user.username;
+                document.getElementById('role-display').textContent = user.role === 'admin' ? 'Elite Tutor' : 'Debater';
+            }
+        };
+
+        function handleLogout() {
+            if(window.CoreManager) window.CoreManager.logout();
+            else { localStorage.removeItem('debatekit_session'); window.location.href = "login.html"; }
+        }
+
+        function quickAsk(text) {
+            const input = document.getElementById('user-input');
+            input.value = text;
+            input.focus();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const container = document.getElementById('chat-container');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message msg-user';
+            userDiv.textContent = text;
+            container.appendChild(userDiv);
+
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            setTimeout(() => {
+                const tutorDiv = document.createElement('div');
+                tutorDiv.className = 'message msg-tutor';
+                
+                const isResearch = text.toLowerCase().includes('statistiche') || text.toLowerCase().includes('trova');
+                const content = isResearch ? 
+                    `Ho trovato un dato chiave: <b>Secondo l'OMS, l'80% delle persone</b> nelle aree urbane è esposto a livelli di inquinamento sopra la soglia.` :
+                    `Ottimo spunto. Per sostenere questo punto, dovresti concentrarti sull'impatto economico a lungo termine.`;
+
+                tutorDiv.innerHTML = `
+                    <p class="font-black text-amber-600 text-[10px] uppercase tracking-widest mb-1">Tuth AI</p>
+                    ${content}
+                    ${isResearch ? `
+                    <button class="mt-4 bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-[10px] font-bold flex items-center gap-2 border border-amber-200 hover:bg-amber-100 transition-colors" onclick="saveResource('Statistica OMS Inquinamento', 'Dato sull\\'inquinamento urbano.')">
+                        <i data-lucide="bookmark" class="w-3 h-3"></i> SALVA
+                    </button>` : ''}
+                `;
+                container.appendChild(tutorDiv);
+                lucide.createIcons();
+                container.scrollTop = container.scrollHeight;
+            }, 800);
+        }
+
+        function saveResource(title, text) {
+            resources.push({ title, text, id: Date.now() });
+            updateResourceUI();
+        }
+
+        function updateResourceUI() {
+            const list = document.getElementById('resources-list');
+            const empty = document.getElementById('empty-res');
+            const count = document.getElementById('count-res');
+            
+            count.textContent = resources.length;
+            if (resources.length > 0) empty.style.display = 'none';
+            
+            list.innerHTML = '';
+            resources.slice().reverse().forEach(res => {
+                const div = document.createElement('div');
+                div.className = 'resource-card';
+                div.innerHTML = `
+                    <div class="flex items-start justify-between mb-2">
+                        <h4 class="text-xs font-black text-slate-800 truncate pr-2">${res.title}</h4>
+                        <button onclick="removeResource(${res.id})" class="text-slate-300 hover:text-rose-500"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    </div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed">${res.text}</p>
+                `;
+                list.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function removeResource(id) {
+            resources = resources.filter(r => r.id !== id);
+            updateResourceUI();
+            if (resources.length === 0) document.getElementById('empty-res').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
